@@ -241,20 +241,37 @@ def create_dummy_slide(title: str, text: str, dest_path: str):
         
     img.save(dest_path)
 
-def get_base_html(image_filename, prev_filename="", next_filename="", video_filename="", v_top=10, v_left=10, v_width=80, v_height=80, hotspots=None, home_position='none', home_v="", arrow_v="", aspect_ratio=1.333):
+def get_base_html(image_filename, prev_filename="", next_filename="", video_filename="", v_top=10, v_left=10, v_width=80, v_height=80, hotspots=None, home_position='none', home_v="", arrow_v="", aspect_ratio=1.333, output_format='v9'):
     video_embed = ""
     if video_filename:
         # Put id directly on video for control.js play() call
         video_embed = f"""
             <video id="slideVid" src="./media/{video_filename}" autoplay loop playsinline muted style="position: absolute; top: {v_top}%; left: {v_left}%; width: {v_width}%; height: {v_height}%; z-index: 50; display: none;"></video>
         """
+        
+    def make_link(target, class_str="", style_str="", onclick_str="", text=""):
+        c_attr = f' class="{class_str}"' if class_str else ""
+        s_attr = f' style="{style_str}"' if style_str else ""
+        o_attr = f' onclick="{onclick_str}"' if onclick_str else ""
+        
+        if target == "javascript:void(0)":
+            return f'<a href="{target}"{c_attr}{s_attr}{o_attr}>{text}</a>'
+            
+        if output_format == 'sfe+':
+            if onclick_str.startswith("location.href"):
+                o_attr = f' onclick="event.stopPropagation();"'
+            return f'<a data-next-file="{target}"{c_attr}{s_attr}{o_attr}>{text}</a>'
+        else:
+            if onclick_str.startswith("location.href"):
+                return f'<a href="javascript:void(0)"{c_attr}{s_attr}{o_attr}>{text}</a>'
+            return f'<a href="{target}"{c_attr}{s_attr}{o_attr}>{text}</a>'
     
     hotspot_html = ""
     menu_overlays = ""
     home_btn_html = ""
     
     if home_position != 'none':
-        home_btn_html = f'<a href="index.html" class="global-home-btn" style="{home_v}"></a>'
+        home_btn_html = make_link("index.html", class_str="global-home-btn", style_str=home_v)
 
     # SFE COMPLIANCE: Inject visual arrows if position is not 'none'
     arrow_html = ""
@@ -262,9 +279,9 @@ def get_base_html(image_filename, prev_filename="", next_filename="", video_file
     # But here we are injecting the actual visual button elements
     if arrow_v and "top: 0; height: 100%" not in arrow_v: # If not the purely invisible tap-zone config
         if prev_filename and prev_filename != "javascript:void(0)":
-            arrow_html += f'<a href="{prev_filename}" class="global-nav-arrow global-nav-prev" style="{arrow_v}"></a>'
+            arrow_html += make_link(prev_filename, class_str="global-nav-arrow global-nav-prev", style_str=arrow_v)
         if next_filename and next_filename != "javascript:void(0)":
-            arrow_html += f'<a href="{next_filename}" class="global-nav-arrow global-nav-next" style="{arrow_v}"></a>'
+            arrow_html += make_link(next_filename, class_str="global-nav-arrow global-nav-next", style_str=arrow_v)
 
     if hotspots:
         for idx, h in enumerate(hotspots):
@@ -274,11 +291,11 @@ def get_base_html(image_filename, prev_filename="", next_filename="", video_file
             common_style = f"position: absolute; top: {h_top}%; left: {h_left}%; width: {h_width}%; height: {h_height}%; z-index: 1000;"
             
             if h_type == 'home':
-                hotspot_html += f'<a href="index.html" style="{common_style}"></a>'
+                hotspot_html += make_link("index.html", style_str=common_style)
             elif h_type == 'nav':
                 target = h.get('target', '#')
                 if not target.endswith('.html') and target != '#': target = f"{target}.html"
-                hotspot_html += f'<a href="{target}" style="{common_style}"></a>'
+                hotspot_html += make_link(target, style_str=common_style)
             elif 'menu' in h_type or 'popup' in h_type:
                 menu_id = f"custom-menu-{idx}"
                 hotspot_html += f'<a href="javascript:void(0)" onclick="toggleMenu(\'{menu_id}\')" style="{common_style}"></a>'
@@ -287,7 +304,7 @@ def get_base_html(image_filename, prev_filename="", next_filename="", video_file
                     target = item.get("target", "#")
                     if not target.endswith('.html') and target != '#': target = f"{target}.html"
                     # SFE COMPLIANCE: Use location.href redirection for absolute reliability in SFE webviews
-                    items_html += f'<li><a href="javascript:void(0)" onclick="location.href=\'{target}\'; event.stopPropagation();">{item.get("label", "Link")}</a></li>'
+                    items_html += f'<li>{make_link(target, onclick_str=f"location.href=\\'{target}\\'; event.stopPropagation();", text=item.get("label", "Link"))}</li>'
                 menu_overlays += f"""
                 <div id="{menu_id}" class="popup-menu-overlay" onclick="toggleMenu('{menu_id}')">
                     <div class="popup-menu-content" onclick="event.stopPropagation()">
@@ -328,8 +345,8 @@ def get_base_html(image_filename, prev_filename="", next_filename="", video_file
             <div id="aspect-ratio-container">
                 <div id="slideCover">
                     <img src="./images/[[IMAGE]]" data-next-file="[[NEXT]]" data-previous-file="[[PREV]]"/>
-                    <a href="[[PREV]]" class="nav-zone nav-zone-left"></a>
-                    <a href="[[NEXT]]" class="nav-zone nav-zone-right"></a>
+                    [[NAV_ZONE_LEFT]]
+                    [[NAV_ZONE_RIGHT]]
                     [[VIDEO_EMBED]]
                     [[HOTSPOT_HTML]]
                     [[HOME_BTN_HTML]]
@@ -500,6 +517,7 @@ async def generate_project(project_id: str, body: Dict[str, Any]):
     new_pages = body.get('pages', [])
     nav_arrows_position = body.get('nav_arrows_position', 'bottom')
     home_position = body.get('home_position', 'top')
+    output_format = body.get('output_format', 'v9')
     # User provides renamed pages: [{"id": "slide_1", "new_html_name": "ProductBenefits.html"}]
     if project_id not in projects_db:
         raise HTTPException(status_code=404, detail="Project not found")
@@ -652,7 +670,8 @@ async def generate_project(project_id: str, body: Dict[str, Any]):
                                             home_position=home_position,
                                             home_v=home_v,
                                             arrow_v=arrow_v,
-                                            aspect_ratio=aspect_ratio)
+                                            aspect_ratio=aspect_ratio,
+                                            output_format=output_format)
                 
                 with open(build_dir / new_html_name, "w") as f:
                     f.write(html_content)
@@ -691,6 +710,7 @@ async def generate_project(project_id: str, body: Dict[str, Any]):
         projects_db[project_id]['pages'] = new_pages
         projects_db[project_id]['nav_arrows_position'] = nav_arrows_position
         projects_db[project_id]['home_position'] = home_position
+        projects_db[project_id]['output_format'] = output_format
         save_db()
 
         return {"download_url": f"/download/{project_id}"}

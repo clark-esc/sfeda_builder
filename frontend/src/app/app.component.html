@@ -235,6 +235,13 @@
             <option value="top-right">Top Right</option>
           </select>
         </div>
+        <div>
+          <label style="display: block; font-size: 0.875rem; font-weight: 500; margin-bottom: 0.4rem; color: var(--text-muted);">⚙️ Output Format</label>
+          <select [(ngModel)]="outputFormat" style="padding: 0.5rem 1rem; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); font-size: 0.9rem; cursor: pointer;">
+            <option value="v9">SFE v9 (&lt;a href="..."&gt;)</option>
+            <option value="sfe+">SFE+ (&lt;a data-next-file="..."&gt;)</option>
+          </select>
+        </div>
       </div>
 
       <div style="display: flex; justify-content: center; gap: 1rem; flex-wrap: wrap;">

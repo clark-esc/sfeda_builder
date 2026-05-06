@@ -29,6 +29,7 @@ export class AppComponent implements OnInit {
   // Global nav positioning settings
   navArrowsPosition: string = 'none';  // 'top' | 'middle' | 'bottom' | 'none'
   homePosition: string = 'none';       // 'top-left' | 'top-right' | 'none'
+  outputFormat: string = 'v9';         // 'v9' | 'sfe+'
   
   recentProjects: any[] = [];
   
@@ -74,6 +75,7 @@ export class AppComponent implements OnInit {
         
         this.navArrowsPosition = project.nav_arrows_position || 'none';
         this.homePosition = project.home_position || 'none';
+        this.outputFormat = project.output_format || 'v9';
         this.downloadUrl = null;
         // Scroll to management view and auto-trigger workbench tour
         setTimeout(() => {
@@ -212,7 +214,8 @@ export class AppComponent implements OnInit {
     const payload = {
       pages: selectedPages,
       nav_arrows_position: this.navArrowsPosition,
-      home_position: this.homePosition
+      home_position: this.homePosition,
+      output_format: this.outputFormat
     };
     
     this.http.post<any>(`${this.API_BASE}/generate/${this.projectId}`, payload).subscribe({
