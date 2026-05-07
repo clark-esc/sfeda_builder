@@ -377,6 +377,10 @@ def get_base_html(image_filename, prev_filename="", next_filename="", video_file
     html = html.replace("[[MENU_OVERLAYS]]", menu_overlays)
     html = html.replace("[[RATIO]]", str(aspect_ratio))
     
+    if output_format == 'sfe+':
+        html = html.replace('src="./images/', 'src="images/')
+        html = html.replace('src="./media/', 'src="media/')
+        
     return html
 
 @app.post("/upload")
