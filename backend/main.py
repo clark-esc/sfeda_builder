@@ -357,16 +357,18 @@ def get_base_html(image_filename, prev_filename="", next_filename="", video_file
             </div>
             [[MENU_OVERLAYS]]
         </div>
-        <script type="text/javascript">
-[[CONTROL]]
-        </script>
+        [[CONTROL_BLOCK]]
     </body>
 </html>"""
 
     html = html_template.replace("[[STYLE]]", SFE_STYLE)
     html = html.replace("[[JQUERY]]", SFE_JQUERY)
     html = html.replace("[[TRACKING_SCRIPT]]", SFE_TRACKING)
-    html = html.replace("[[CONTROL]]", SFE_CONTROL)
+    
+    if output_format == 'sfe+':
+        html = html.replace("[[CONTROL_BLOCK]]", '<script type="text/javascript" src="js/control.js"></script>')
+    else:
+        html = html.replace("[[CONTROL_BLOCK]]", f'<script type="text/javascript">\\n{SFE_CONTROL}\\n        </script>')
     html = html.replace("[[IMAGE]]", image_filename)
     html = html.replace("[[NEXT]]", next_filename if next_filename else "javascript:void(0)")
     html = html.replace("[[PREV]]", prev_filename if prev_filename else "javascript:void(0)")
@@ -705,8 +707,25 @@ async def generate_project(project_id: str, body: Dict[str, Any]):
                             href = a.get('href', '')
                             if href in rename_map:
                                 a['href'] = rename_map[href]
+                                
+                        if output_format == 'sfe+':
+                            has_script = False
+                            for script in soup.find_all('script'):
+                                if script.get('src') == 'js/control.js':
+                                    has_script = True
+                                    break
+                            if not has_script and soup.body:
+                                script_tag = soup.new_tag("script", type="text/javascript", src="js/control.js")
+                                soup.body.append(script_tag)
+                                
                         with open(html_file, 'w', encoding='utf-8', errors='replace') as f:
                             f.write(str(soup))
+
+        if output_format == 'sfe+':
+            js_dir = build_dir / "js"
+            js_dir.mkdir(exist_ok=True)
+            with open(js_dir / "control.js", "w") as f:
+                f.write(SFE_CONTROL)
 
         # ZIP it up (Handles both PDF and ZIP source types)
         shutil.make_archive(str(project_dir / "output"), 'zip', build_dir)
