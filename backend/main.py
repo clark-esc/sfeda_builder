@@ -246,7 +246,7 @@ def get_base_html(image_filename, prev_filename="", next_filename="", video_file
     if video_filename:
         # Put id directly on video for control.js play() call
         video_embed = f"""
-            <video id="slideVid" src="./media/{video_filename}" autoplay loop playsinline muted style="position: absolute; top: {v_top}%; left: {v_left}%; width: {v_width}%; height: {v_height}%; z-index: 50; display: none;"></video>
+            <video id="slideVid" src="./media/{video_filename}" autoplay loop playsinline muted style="position: absolute; top: {v_top}%; left: {v_left}%; width: {v_width}%; height: {v_height}%; z-index: 50; display: block;"></video>
         """
         
     def make_link(target, class_str="", style_str="", onclick_str="", text=""):
