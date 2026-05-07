@@ -49,12 +49,12 @@ body,html{
 }
 
 /* SFE COMPLIANCE: Hotspots MUST be on top of image and display: block */
-#slideCover a {
+#slideCover a, #slideCover [data-next-file] {
     display: block !important;
     z-index: 1000 !important;
     text-decoration: none;
 }
-a[data-next-file] {
+[data-next-file] {
     cursor: pointer !important;
 }
 

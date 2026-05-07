@@ -254,14 +254,13 @@ def get_base_html(image_filename, prev_filename="", next_filename="", video_file
         s_attr = f' style="{style_str}"' if style_str else ""
         o_attr = f' onclick="{onclick_str}"' if onclick_str else ""
         
-        if target == "javascript:void(0)":
-            return f'<a href="{target}"{c_attr}{s_attr}{o_attr}>{text}</a>'
-            
         if output_format == 'sfe+':
             if onclick_str.startswith("location.href"):
                 o_attr = f' onclick="event.stopPropagation();"'
-            return f'<a data-next-file="{target}"{c_attr}{s_attr}{o_attr}>{text}</a>'
+            return f'<div data-next-file="{target}"{c_attr}{s_attr}{o_attr}>{text}</div>'
         else:
+            if target == "javascript:void(0)":
+                return f'<a href="{target}"{c_attr}{s_attr}{o_attr}>{text}</a>'
             if onclick_str.startswith("location.href"):
                 return f'<a href="javascript:void(0)"{c_attr}{s_attr}{o_attr}>{text}</a>'
             return f'<a href="{target}"{c_attr}{s_attr}{o_attr}>{text}</a>'
@@ -334,9 +333,7 @@ def get_base_html(image_filename, prev_filename="", next_filename="", video_file
                 background: #000;
             }
         </style>
-        <script type="text/javascript">
-[[JQUERY]]
-        </script>
+        [[JQUERY_BLOCK]]
         <script type="text/javascript">
 [[TRACKING_SCRIPT]]
         </script>
@@ -362,7 +359,11 @@ def get_base_html(image_filename, prev_filename="", next_filename="", video_file
 </html>"""
 
     html = html_template.replace("[[STYLE]]", SFE_STYLE)
-    html = html.replace("[[JQUERY]]", SFE_JQUERY)
+    
+    if output_format == 'sfe+':
+        html = html.replace("[[JQUERY_BLOCK]]", '<script type="text/javascript" src="js/jquery.min.js"></script>')
+    else:
+        html = html.replace("[[JQUERY_BLOCK]]", f'<script type="text/javascript">\\n{SFE_JQUERY}\\n        </script>')
     html = html.replace("[[TRACKING_SCRIPT]]", SFE_TRACKING)
     
     if output_format == 'sfe+':
@@ -709,12 +710,28 @@ async def generate_project(project_id: str, body: Dict[str, Any]):
                                 a['href'] = rename_map[href]
                                 
                         if output_format == 'sfe+':
-                            has_script = False
+                            # Convert <a> tags to <div> tags if they are SFE+ hotspots (ones with data-next-file or converted hrefs)
+                            for a in soup.find_all('a'):
+                                target = a.get('data-next-file') or a.get('href')
+                                if target:
+                                    a.name = 'div'
+                                    a['data-next-file'] = target
+                                    if 'href' in a.attrs:
+                                        del a['href']
+                            
+                            has_control = False
+                            has_jquery = False
                             for script in soup.find_all('script'):
                                 if script.get('src') == 'js/control.js':
-                                    has_script = True
-                                    break
-                            if not has_script and soup.body:
+                                    has_control = True
+                                if script.get('src') == 'js/jquery.min.js':
+                                    has_jquery = True
+                            
+                            if not has_jquery and soup.head:
+                                jq_tag = soup.new_tag("script", type="text/javascript", src="js/jquery.min.js")
+                                soup.head.insert(0, jq_tag)
+                            
+                            if not has_control and soup.body:
                                 script_tag = soup.new_tag("script", type="text/javascript", src="js/control.js")
                                 soup.body.append(script_tag)
                                 
@@ -726,6 +743,8 @@ async def generate_project(project_id: str, body: Dict[str, Any]):
             js_dir.mkdir(exist_ok=True)
             with open(js_dir / "control.js", "w") as f:
                 f.write(SFE_CONTROL)
+            with open(js_dir / "jquery.min.js", "w") as f:
+                f.write(SFE_JQUERY)
 
         # ZIP it up (Handles both PDF and ZIP source types)
         shutil.make_archive(str(project_dir / "output"), 'zip', build_dir)
