@@ -69,6 +69,7 @@ export class AppComponent implements OnInit {
         }
         this.pages = project.pages.map((p: any, index: number) => ({
           ...p,
+          new_html_name: index === 0 ? 'index.html' : (p.new_html_name || p.html_name),
           selected: (p.selected !== undefined) ? p.selected : true
         }));
         if (this.pages.length > 0) this.pages[0].selected = true; // Ensure index is locked
@@ -101,69 +102,11 @@ export class AppComponent implements OnInit {
   }
 
   startTour() {
-    if (typeof introJs === 'undefined') {
-      console.warn('Intro.js library not loaded.');
-      return;
-    }
-    introJs().setOptions({
-      disableInteraction: false,
-      showProgress: true,
-      steps: [
-        {
-          title: 'Welcome to the PRO Builder!',
-          intro: 'Welcome to the upgraded Detailing Aid Converter! You now have access to <b>Selective Slide Generation</b>, <b>Visual Navigation Positioning</b>, and <b>High-Precision Interaction Drawing</b>.'
-        },
-        {
-          element: document.querySelector('#step1-upload'),
-          title: 'Step 1: Upload Source',
-          intro: 'Start by uploading your PDF or ZIP. <br><br><b>PRO Tip:</b> Once uploaded, you can pick exactly which slides to focus on for lightning-fast testing!'
-        },
-        {
-          element: document.querySelector('#tour-help'),
-          title: 'Your Command Center',
-          intro: 'The tour will automatically update with advanced tips (Menus, Home Links, Video Drawing) once your slides are loaded! Restart it here anytime.'
-        }
-      ]
-    }).start();
+    return; // Disabled to prevent click-blocking overlay bugs
   }
   
   tourPages() {
-    introJs().setOptions({
-      disableInteraction: false,
-      showProgress: true,
-      steps: [
-        {
-          element: document.querySelector('#step2-rename'),
-          title: 'Step 2: Rename & Select',
-          intro: 'Manage your slides here. You can rename files (e.g. "ProductBenefits.html") and <b>Select/Deselect</b> specific slides to build only what you need. <br><br><i>Note: Slide 1 is locked as your mandatory "index.html" landing page.</i>'
-        },
-        {
-          element: document.querySelector('.media-upload-area'),
-          title: 'Attach Media',
-          intro: 'Upload an mp4 or webm video for a specific slide here!'
-        },
-        {
-          element: document.querySelector('.maximize-btn'),
-          title: 'Precision Editor',
-          intro: 'Use the <b>Maximize</b> tool to draw pixel-perfect interaction boxes on a full-screen view of the slide.'
-        },
-        {
-          element: document.querySelector('#tour-modes'),
-          title: 'New Interaction Modes',
-          intro: 'Choose your weapon! You can now draw regions for <b>Videos</b>, <b>Home Links</b>, <b>Slide Links</b>, or even custom <b>Popup Menus</b> for a professional tablet experience.'
-        },
-        {
-          element: document.querySelector('#global-settings'),
-          title: 'Veeva-Ready Navigation',
-          intro: 'Choose where visual arrows and the global Home button should appear. We automatically re-wire navigation to skip any unselected slides!'
-        },
-        {
-          element: document.querySelector('#step3-generate'),
-          title: 'Step 3: Generate & Test',
-          intro: 'Building only 5 slides? The generator will tell you! Click to build, then use <b>Preview</b> to test your flow before downloading the final ZIP.'
-        }
-      ]
-    }).start();
+    return;
   }
 
   onFileChange(event: any) {
@@ -255,8 +198,7 @@ export class AppComponent implements OnInit {
   
   previewAid() {
     if (this.pages.length > 0 && this.projectId) {
-       const firstPageName = this.pages[0].new_html_name;
-       const url = `${this.API_BASE}/storage/${this.projectId}/build/${firstPageName}`;
+       const url = `${this.API_BASE}/storage/${this.projectId}/build/index.html`;
        window.open(url, '_blank');
     }
   }

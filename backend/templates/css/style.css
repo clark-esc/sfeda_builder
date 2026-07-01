@@ -216,3 +216,69 @@ body,html{
     transform: scale(0.9);
     background-color: #fff;
 }
+
+/* POPUP MENU */
+.popup-menu-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0,0,0,0.6);
+    z-index: 10000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+}
+
+.popup-menu-content {
+    background: #fff;
+    padding: 20px;
+    border-radius: 12px;
+    min-width: 300px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+    position: relative;
+}
+
+.popup-menu-content ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    font-family: sans-serif;
+}
+
+.popup-menu-content ul li a,
+.popup-menu-content ul li div {
+    display: block;
+    padding: 12px 15px;
+    background: #f5f5f5;
+    border-radius: 8px;
+    text-decoration: none;
+    color: #333;
+    font-weight: 500;
+    transition: background 0.2s;
+    cursor: pointer;
+}
+
+.popup-menu-content ul li a:active,
+.popup-menu-content ul li a:hover,
+.popup-menu-content ul li div:active,
+.popup-menu-content ul li div:hover {
+    background: #e0e0e0;
+}
+
+.close-menu {
+    margin-top: 15px;
+    width: 100%;
+    padding: 10px;
+    background: #ef4444;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 16px;
+}

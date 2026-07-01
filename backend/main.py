@@ -272,15 +272,21 @@ def get_base_html(image_filename, prev_filename="", next_filename="", video_file
     if home_position != 'none':
         home_btn_html = make_link("index.html", class_str="global-home-btn", style_str=home_v)
 
-    # SFE COMPLIANCE: Inject visual arrows if position is not 'none'
+    # SFE COMPLIANCE: Inject visual arrows (or invisible tap zones if position is 'none')
     arrow_html = ""
-    # We use the same 'none' check as the nav-zone opacity rule
-    # But here we are injecting the actual visual button elements
-    if arrow_v and "top: 0; height: 100%" not in arrow_v: # If not the purely invisible tap-zone config
-        if prev_filename and prev_filename != "javascript:void(0)":
-            arrow_html += make_link(prev_filename, class_str="global-nav-arrow global-nav-prev", style_str=arrow_v)
-        if next_filename and next_filename != "javascript:void(0)":
-            arrow_html += make_link(next_filename, class_str="global-nav-arrow global-nav-next", style_str=arrow_v)
+    if arrow_v:
+        # If it's the invisible tap zone, position them left and right respectively
+        if "top: 0; height: 100%" in arrow_v:
+            invisible_style = arrow_v + " position: absolute; display: block; z-index: 10;"
+            if prev_filename and prev_filename != "javascript:void(0)":
+                arrow_html += make_link(prev_filename, style_str=invisible_style + " left: 0;")
+            if next_filename and next_filename != "javascript:void(0)":
+                arrow_html += make_link(next_filename, style_str=invisible_style + " right: 0;")
+        else:
+            if prev_filename and prev_filename != "javascript:void(0)":
+                arrow_html += make_link(prev_filename, class_str="global-nav-arrow global-nav-prev", style_str=arrow_v)
+            if next_filename and next_filename != "javascript:void(0)":
+                arrow_html += make_link(next_filename, class_str="global-nav-arrow global-nav-next", style_str=arrow_v)
 
     if hotspots:
         for idx, h in enumerate(hotspots):
@@ -297,19 +303,18 @@ def get_base_html(image_filename, prev_filename="", next_filename="", video_file
                 hotspot_html += make_link(target, style_str=common_style)
             elif 'menu' in h_type or 'popup' in h_type:
                 menu_id = f"custom-menu-{idx}"
-                hotspot_html += f'<a href="javascript:void(0)" onclick="toggleMenu(\'{menu_id}\')" style="{common_style}"></a>'
+                hotspot_html += f'<div onclick="document.getElementById(\'{menu_id}\').style.display=\'flex\'" style="{common_style}"></div>'
                 items_html = ""
                 for item in h.get('menuItems', []):
                     target = item.get("target", "#")
                     if not target.endswith('.html') and target != '#': target = f"{target}.html"
-                    # SFE COMPLIANCE: Use location.href redirection for absolute reliability in SFE webviews
-                    onclick_val = f"location.href='{target}'; event.stopPropagation();"
-                    items_html += f'<li>{make_link(target, onclick_str=onclick_val, text=item.get("label", "Link"))}</li>'
+                    # Bypass make_link to prevent it from stripping our routing logic, as clicks won't bubble through the popup overlay
+                    items_html += f'<li><div onclick="window.location.href=\'{target}\'">{item.get("label", "Link")}</div></li>'
                 menu_overlays += f"""
-                <div id="{menu_id}" class="popup-menu-overlay" onclick="toggleMenu('{menu_id}')">
+                <div id="{menu_id}" class="popup-menu-overlay" onclick="document.getElementById('{menu_id}').style.display='none'">
                     <div class="popup-menu-content" onclick="event.stopPropagation()">
                         <ul>{items_html}</ul>
-                        <button class="close-menu" onclick="toggleMenu('{menu_id}')">Close</button>
+                        <button class="close-menu" onclick="document.getElementById('{menu_id}').style.display='none'">Close</button>
                     </div>
                 </div>
                 """
@@ -343,8 +348,6 @@ def get_base_html(image_filename, prev_filename="", next_filename="", video_file
             <div id="aspect-ratio-container">
                 <div id="slideCover">
                     <img src="./images/[[IMAGE]]" data-next-file="[[NEXT]]" data-previous-file="[[PREV]]"/>
-                    [[NAV_ZONE_LEFT]]
-                    [[NAV_ZONE_RIGHT]]
                     [[VIDEO_EMBED]]
                     [[HOTSPOT_HTML]]
                     [[HOME_BTN_HTML]]
@@ -581,7 +584,9 @@ async def generate_project(project_id: str, body: Dict[str, Any]):
         if project_type in ['pdf']:
             # Rename logic and building HTML
             # Convert new_pages list to a map dict
-            rename_map = {p['id']: p.get('new_html_name', p.get('html_name')) for p in new_pages}
+            rename_map = {p['id']: p.get('new_html_name') or p.get('html_name') for p in new_pages}
+            if new_pages:
+                rename_map[new_pages[0]['id']] = "index.html"
             frontend_state_map = {p['id']: p for p in new_pages}
             
             # CONTEXT: Selective build logic. 
